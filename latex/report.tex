@@ -1,0 +1,163 @@
+\documentclass{article}
+
+\usepackage{graphicx} % Required for inserting images
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry} \usepackage{amsmath}
+\usepackage{amsthm} %proof environment
+\usepackage{amsthm} %proof environment
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{enumitem} %nice lists
+\usepackage{verbatim} %useful for something 
+\usepackage{xcolor}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{blindtext} % I have no idea what this is 
+\usepackage{caption}  % need this for unnumbered captions/figures
+\usepackage{natbib}
+\usepackage{appendix}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+    pdftitle={Overleaf Example},
+    pdfpagemode=FullScreen,
+    }
+
+\titleformat{\section}{\bfseries\Large}{Problem \thesection:}{5pt}{}
+
+\begin{document}
+
+\title{Statistical Arbitrage}
+\author{Dante Buhl}
+
+
+\newcommand{\wrms}{w_{\text{rms}}}
+\newcommand{\bs}[1]{\boldsymbol{#1}}
+\newcommand{\tb}[1]{\textbf{#1}}
+\newcommand{\bmp}[1]{\begin{minipage}{#1\textwidth}}
+\newcommand{\emp}{\end{minipage}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\N}{\mathcal{N}}
+%\newcommand{\K}{\bs{\mathrm{K}}}
+\newcommand{\m}{\bs{\mu}_*}
+\newcommand{\s}{\bs{\Sigma}_*}
+\newcommand{\dt}{\Delta t}
+\newcommand{\dx}{\Delta x}
+\newcommand{\tr}[1]{\text{Tr}(#1)}
+\newcommand{\Tr}[1]{\text{Tr}(#1)}
+\newcommand{\Div}{\nabla \cdot}
+\renewcommand{\div}{\nabla \cdot}
+\newcommand{\Curl}{\nabla \times}
+\newcommand{\Grad}{\nabla}
+\newcommand{\grad}{\nabla}
+\newcommand{\grads}{\nabla_s}
+\newcommand{\gradf}{\nabla_f}
+\newcommand{\xs}{x_s}
+\newcommand{\x}{\bs{x}}
+\newcommand{\xf}{x_f}
+\newcommand{\ts}{t_s}
+\newcommand{\tf}{t_f}
+\newcommand{\pt}{\partial t}
+\newcommand{\pz}{\partial z}
+\newcommand{\uvec}{\bs{u}}
+\newcommand{\bvec}{\bs{B}}
+\newcommand{\nvec}{\hat{\bs{n}}}
+\newcommand{\tu}{\tilde{\uvec}}
+\newcommand{\B}{\bs{B}}
+\newcommand{\A}{\bs{A}}
+\newcommand{\jvec}{\bs{j}}
+\newcommand{\F}{\bs{F}}
+\newcommand{\T}{\tilde{T}}
+\newcommand{\ez}{\bs{e}_z}
+\newcommand{\ex}{\bs{e}_x}
+\newcommand{\ey}{\bs{e}_y}
+\newcommand{\eo}{\bs{e}_{\bs{\Omega}}}
+\newcommand{\ppt}[1]{\frac{\partial #1}{\partial t}}
+\newcommand{\pp}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\pptwo}[2]{\frac{\partial^2 #1}{\partial #2^2}}
+\newcommand{\ddtwo}[2]{\frac{d^2 #1}{d #2^2}}
+\newcommand{\DDt}[1]{\frac{D #1}{D t}}
+\newcommand{\ppts}[1]{\frac{\partial #1}{\partial t_s}}
+\newcommand{\pptf}[1]{\frac{\partial #1}{\partial t_f}}
+\newcommand{\ppz}[1]{\frac{\partial #1}{\partial z}}
+\newcommand{\ddz}[1]{\frac{d #1}{d z}}
+\newcommand{\ppzetas}[1]{\frac{\partial^2 #1}{\partial \zeta^2}}
+\newcommand{\ppzs}[1]{\frac{\partial #1}{\partial z_s}}
+\newcommand{\ppzf}[1]{\frac{\partial #1}{\partial z_f}}
+\newcommand{\ppx}[1]{\frac{\partial #1}{\partial x}}
+\newcommand{\ddx}[1]{\frac{d #1}{d x}}
+\newcommand{\ppxi}[1]{\frac{\partial #1}{\partial x_i}}
+\newcommand{\ppxj}[1]{\frac{\partial #1}{\partial x_j}}
+\newcommand{\ppy}[1]{\frac{\partial #1}{\partial y}}
+\newcommand{\ppzeta}[1]{\frac{\partial #1}{\partial \zeta}}
+\renewcommand{\k}{\bs{k}}
+\newcommand{\real}[1]{\text{Re}\left[#1\right]}
+
+
+\maketitle 
+% This line removes the automatic indentation on new paragraphs
+\setlength{\parindent}{0pt}
+
+\section{The OU Process}
+    \begin{enumerate}
+        \item 
+            \begin{gather*}
+                dX_t = \theta(\mu-X_t)dt + \sigma dW_t, \quad \theta, \sigma > 0
+                \\
+                d(e^{\theta t}X_t) = e^{\theta t}dX_t + \theta e^{\theta t}X_tdt
+                \\
+                d(e^{\theta t}X_t) =  e^{\theta t}\left(\theta(\mu-X_t)dt +
+                \sigma dW_t\right) + \theta e^{\theta t}X_t
+                \\
+                d(e^{\theta t}X_t) = \theta e^{\theta t}\mu dt +
+                \sigma e^{\theta t} dW_t
+                \\
+                e^{\theta t}X_t - X_0 = \mu (e^{\theta t} - 1) + \sigma \int_0^t e^{\theta s}dW_s
+                \\
+                X_t = \mu - (X_0 - \mu)e^{-\theta t} + \sigma \int_0^t e^{-\theta
+                (t - s)}dW_s
+            \end{gather*}
+        \item 
+            We begin by investigating the stochastic term in the previous
+            result: 
+            \begin{gather*}
+                X_t = \alpha + \beta, \quad \alpha = \mu - (X_0 - \mu)e^{-\theta
+                t}, \quad \beta = \sigma \int_0^t e^{-\theta (t - s)}dW_s
+                \sigma \int_0^t e^{-\theta (t - s)}dW_s \sim N(0,
+                \sigma^2\int_0^t e^{-2\theta (t - s)}ds)
+                \\
+                \sim N\left(0, \frac{\sigma^2}{2\theta}\left[1 -  e^{-2\theta t}\right]\right)
+            \end{gather*}
+            \begin{gather*}
+                E(X_t) = E\left(\mu - (X_0 - \mu)e^{-\theta t} + \sigma \int_0^t e^{-\theta
+                (t - s)}dW_s\right)
+                \\
+                = \mu - (X_0 - \mu)e^{-\theta t} + E(\sigma \int_0^t e^{-\theta
+                (t - s)}dW_s) 
+                \\
+                = \mu - (X_0 - \mu)e^{-\theta t}
+            \end{gather*} \begin{gather*} X_t 
+                Var(X_t) = E(X_t^2) - E(X_t)^2
+                \\
+                = E\left(\alpha^2 + 2\alpha\beta + \beta^2 \right)- \alpha^2
+                \\
+                =  E(\beta^2)
+                \\
+                = \frac{\sigma^2}{2\theta}\left[1 -  e^{-2\theta t}\right]
+            \end{gather*}
+            This implies that the stationary distribution for $\lim_{t\to\infty}
+            X_t$ is 
+            \begin{gather*}
+                \lim_{t\to\infty} X_t \sim N\left(\mu,
+                \frac{\sigma^2}{2\theta}\right)
+            \end{gather*}
+        \item 
+            
+\end{enumerate}
+\end{document}
