@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1790750954.87173 "report.tex" "report.pdf" "report" 1790750955.19204 0
+["pdflatex"] 1790808086.42704 "report.tex" "report.pdf" "report" 1790808086.92553 0
   "/usr/share/texmf-dist/fonts/map/fontname/texfonts.map" 1775415801 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1775415801 1004 54797486969f23fa377b128694d548df ""
   "/usr/share/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1775415801 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -29,6 +29,7 @@
   "/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1775415801 35752 024fb6c41858982481f6968b5fc26508 ""
   "/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb" 1775415801 32722 d7379af29a190c3f453aba36302ff5a9 ""
   "/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb" 1775415801 32362 179c33bbf43f19adbb3825bb4e36e57a ""
+  "/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb" 1775415801 31809 8670ca339bf94e56da1fc21c80635e2a ""
   "/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb" 1775415801 32762 224316ccc9ad3ca0423a14971cfa7fc1 ""
   "/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1775415801 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb" 1775415801 32716 08e384dc442464e7285e891af9f45947 ""
@@ -157,11 +158,11 @@
   "/usr/share/texmf-dist/tex/latex/url/url.sty" 1775415801 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "/usr/share/texmf-dist/tex/latex/xcolor/xcolor.sty" 1775415801 55384 b454dec21c2d9f45ec0b793f0995b992 ""
   "/usr/share/texmf-dist/web2c/texmf.cnf" 1775415801 43569 fd570f2fa160877d211e859f687312ba ""
-  "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1780425259 5381098 9f966685d344a3d34adbc94f52661a01 ""
-  "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1780425247 2328180 79d5ca11ae4145a28de005f5c8948059 ""
-  "report.aux" 1790750955.15658 273 cbc6af351c8346c7fe340009e0219932 "pdflatex"
-  "report.out" 1790750955.15658 119 e646accfdead6a2efeff41cd1fceec1a "pdflatex"
-  "report.tex" 1790750954.05959 5723 bcfc8d109e7cea5b7a5d7b3e4424f597 ""
+  "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1780341830 5381098 9f966685d344a3d34adbc94f52661a01 ""
+  "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1780341800 2378845 00b63f9d4fc992e3b728af5e767d4bea ""
+  "report.aux" 1790808086.86934 395 66539719c45bba87f5bc33916197e055 "pdflatex"
+  "report.out" 1790808086.87034 293 7f21a2f4509ab93e41a80de97a6fc178 "pdflatex"
+  "report.tex" 1790808086.25134 8168 a9af6337539eb21eb8801b3923ede2e9 ""
   (generated)
   "report.aux"
   "report.log"

@@ -37,6 +37,7 @@
 
 
 \newcommand{\wrms}{w_{\text{rms}}}
+\newcommand{\Var}{\text{Var}}
 \newcommand{\bs}[1]{\boldsymbol{#1}}
 \newcommand{\tb}[1]{\textbf{#1}}
 \newcommand{\bmp}[1]{\begin{minipage}{#1\textwidth}}
@@ -157,7 +158,58 @@
                 \lim_{t\to\infty} X_t \sim N\left(\mu,
                 \frac{\sigma^2}{2\theta}\right)
             \end{gather*}
-        \item 
-            
-\end{enumerate}
+        \item Half-lfe of a deviation. First we define a deviation as a
+        perturbation from an initial condition. Since this is a stochastic
+        timeseries, we can inject this deviation at any point in the timeseries.
+        We define its half-life $\lambda$ as how long it takes for that deviation to
+        decrease to half of its original value. 
+
+        \begin{gather*}
+            X_t | X_O + d = \mu + (X_0 + d - \mu) e^{\theta t} + \sigma
+            \int_0^{t} e^{-\theta (t - s)}dW_s
+            \\
+            X_t | X_O + d = \left(X_t | X_0\right) + d e^{-\theta t}
+        \end{gather*}
+        We find that the deviation follows an expoential decay curve given by
+        $e^{-\theta t}$. The half life of this is easy to measure, we have
+        \begin{gather*}
+            \frac{1}{2} = e^{-\theta \lambda}
+            \\
+            \lambda = \frac{\ln(2)}{\theta}
+        \end{gather*}
+
+        \item Exact Discretization: 
+            We find the exact discretization by chosing $t = \Delta t$ in the original
+            solution to the SDE. We find
+            \begin{gather*}
+                X_{n+1} | X_{n} = \mu + (X_{n} - \mu)e^{-\Delta t \theta} +
+                \int_0^{\Delta t} e^{-\theta (\Delta t - s)}dW_s
+                \\
+                = \mu\left(1 - e^{-\Delta t\theta}\right) + X_n e^{-\Delta t \theta} + \int_0^{\Delta t} e^{-\theta (\Delta t - s)}dW_s
+                \\
+                = a + bX_n + \epsilon_k
+            \end{gather*}
+            Here we have shown that $a = \mu(1 - b)$, $b
+            = e^{-\Delta t \theta}$ and $\epsilon_k = \int_0^{\Delta t}
+            e^{-\theta (\Delta t - s)}dW_s$. We have already shown (using
+            $\Delta t$ to replace $t$) that $\epsilon_k \sim
+            N\left(0,\frac{\sigma^2}{2\theta}(1 - b^2)\right)$. We invert these
+            equations to find, 
+            \begin{gather*}
+                \theta =- \frac{\ln(b)}{\Delta t}
+                \\
+                \mu = \frac{a}{1 - b}
+                \\
+                \sigma = -\frac{2\Var(\epsilon_k)\ln(b)}{\Delta t(1 - b^2)}
+            \end{gather*}
+    \end{enumerate}
+\section{Simulation and Estimation}
+    \begin{enumerate}
+        \item Simulating Euler-Maruyama
+
+        \item Derive MLE of $(\theta, \mu, \sigma)$. Show it is equivalent to
+        the least squares regression of $X_{k+1}$ on $X_{k}$. 
+
+        \item Analyze the effectiveness of  $\theta$. 
+    \end{enumerate}
 \end{document}
