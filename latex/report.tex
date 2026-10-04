@@ -39,6 +39,7 @@
 \newcommand{\wrms}{w_{\text{rms}}}
 \newcommand{\Var}{\text{Var}}
 \newcommand{\bs}[1]{\boldsymbol{#1}}
+\newcommand{\hbs}[1]{\hat{\boldsymbol{#1}}}
 \newcommand{\tb}[1]{\textbf{#1}}
 \newcommand{\bmp}[1]{\begin{minipage}{#1\textwidth}}
 \newcommand{\emp}{\end{minipage}}
@@ -297,6 +298,62 @@
     \section{Time Varying Hedge Ratio}
     \begin{enumerate}
         \item \textbf{Kalman-Filter}
+        We begin by writing the state-space model,
+        \begin{gather*}
+            \ln(P_A) = \alpha_t + \beta_t\ln(P_B) + v_t
+        \end{gather*}
+        where $\alpha_t$ and $\beta_t$ are described by random walks and $v_t$
+        is a zero-mean gaussian with variance $R$ describing some noise in the
+        price data. 
+        We will now look at the evolution of $(\alpha_t,\beta_t)$. We know that
+        increments to these are i.i.d. white noise. Thus, 
+        \begin{gather*}
+            \left[\begin{array}{c} \alpha_{t}\\\beta_t\end{array}\right] = 
+            \left[\begin{array}{c} \alpha_{t-1}\\\beta_{t-1}\end{array}\right] +
+            \bs{dW}
+        \end{gather*}
+        Thus we expect noise to be injected into the state model with variance $\Delta t$. Let us
+        assume that we have already done the task of fitting $(\alpha_t,
+        \beta_t)$ for some $t \le t_0$ with confidence $P$. We would then have the
+        following prediction for $t_1$:
+        \begin{gather*}
+            \hbs{\alpha}_t = (\hat{\alpha}_t, \hat{\beta}_t) = (\alpha_{t-1}, \beta_{t-1})
+            \hbs{P}_t = \bs{P}_{t-1} + Q
+        \end{gather*}
+        We then look at how closely these $\alpha_t, \beta_t$ fit the
+        observation model: $\ln(P_A) = \bs{H}_t\cdot\bs{\alpha}_t$. 
+        We obtain the error in our observations given by: 
+        \begin{gather*}
+            e_t = \ln(P_A) - \bs{H}_t\cdot\hbs{\alpha}_t
+        \end{gather*}
+        This is coupled with the uncertainty/confidence of our our state model
+        being injected into our observations. We find the confidence at this
+        level being, 
+        \begin{gather*}
+            oe_t = \bs{H}_t\cdot(\hbs{P}_t\bs{H}_t) + R
+        \end{gather*}
+        and finally the ratio between our state and observation confidence being
+        equivalent to the kalman gain $K_t$. 
+        \begin{gather*}
+            \bs{K}_t = \frac{1}{oe_t}\hbs{P}_t\bs{H}_t
+        \end{gather*}
+        Using the Kalman gain we can correct our model, we have
+        \begin{gather*}
+            \bs{\alpha}_t = \hbs{\alpha}_t + \bs{K}_te_t
+            \\
+            \bs{P}_t = (I - \bs{K}_t\bs{H}_t^T)\hbs{P}_t
+        \end{gather*}
+        Therefore we have a nice recursion, if we know our Kalman filter
+        $\bs{\alpha}_t$ and $\bs{P}_t$ we can always update the filter with
+        another timestep following the above scheme. Doing this over, the
+        entirety of the given timeseries allows us to find a hedge ratio
+        $\beta_t$ which is closer to the true hedge ratio at a given time $t$.
+        Note that that Kalman filter can be updated as new data is
+        presented and therefore so can our spread. As new data is introduced to
+        our system, after updating the hedge-ratio/spread, we have a new
+        timestep to fit the SDE. A simple
+        recursive least-squares solution is performed to update $\mu, \theta,
+        \sigma$. 
 
         \item \textbf{Comparing static and Kalman hedge ratios}
     \end{enumerate}
