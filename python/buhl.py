@@ -23,7 +23,7 @@ def fit_spread(lPa, lPb):
         
     # solves the linear regression problem to fit the spread
     A = np.stack((lPb,np.ones_like(lPb)), axis=1)
-    coeff,_,_,_ = np.linalg.lstsq(A,lPa)
+    coeff,resid,_,_ = np.linalg.lstsq(A,lPa)
     hedge_ratio, constant = coeff
     S = lPa - hedge_ratio*lPb - constant
     # Augmented Dickey-Fuller test to see if the spread is stationary
@@ -35,8 +35,46 @@ def fit_spread(lPa, lPb):
         result = False
     else:
         result = True
-    return S, hedge_ratio, result
+    return S, hedge_ratio, [alpha, resid,pvalue], result
 
+def kalman_spread(lPa, lPb, dt):
+    # fits a kalman filter to a potential spread
+    # starts by isolating a quarter of the initial timeseries, fits a
+    # least-squares regression on it, and then loops forward and applies the
+    # kalman filter to each following timestep
+    # returns the spread and hedge ratio as a timeseries
+    nt = np.size(lPa)
+    fnt = int(nt/4)
+    # initial fit on reduced timeseries
+    S, hedge_ratio, other_stuff, pvalue, result = fit_spread(lPa[:fnt], lPb[:fnt])
+    alpha, residuals, pvalue = other_stuff
+    alpha = np.ones_like(lPa)*alpha
+    hedge_ratio = np.ones_like(lPa)*hedge_ratio
+    
+    # initializing kalman recursion
+    P = np.eye(2)
+    P[0,0] = pvalue
+    P[1,1] = residuals/fnt
+    R = 0 # placeholder until R is implemented
+
+    # propagating kalman filter forward
+    for i in range(fnt,nt):
+        H = [[1], [lPb[i+1]]]
+        # compute the error in the prediction
+        err = lPa[i+1] - alpha[i] - hedge_ratio[i]*lPb[i+1]
+        # propagate the uncertainty forward
+        P = P + np.eye(2)*dt
+        # compute uncertainty of observations
+        OE = np.matmul(H.T, np.matmul(P,H)) + R
+        # Kalman Gain
+        K = np.matmul(P,H)/OE
+        # Update alpha, hedge_ratio, uncertainty
+        alpha[i+1] = alpha[i] + K[0]*err
+        hedge_ratio[i+1] = hedge_ratio[i] + K[0]*err
+        P = np.matmul(np.eye(2) - np.outer(K,H),P)
+    return [alpha, hedge_ratio, P]
+         
+    
 def fit_SDE(spread, nt, dt):
     # given a stationary, mean-reverting timeseries
     A = np.stack((spread[:nt-1],np.ones_like(spread[:nt-1])), axis=1)

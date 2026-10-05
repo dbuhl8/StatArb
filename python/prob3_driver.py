@@ -79,7 +79,7 @@ for i, pair in enumerate(etf_pairs):
     if coint_pass: 
         print("ETFS {} and {} are cointegratred".format(key1, key2))
         theta, mu, sigma = db.fit_SDE(spread, nt, dt)
-        half_life = np.log(2/theta)
+        half_life = np.log(2)/theta
         if half_life < nt*dt*0.1:
             ax2.plot(t,spread,label="{}&{}".format(key1,key2))
 

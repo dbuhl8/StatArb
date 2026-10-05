@@ -108,7 +108,10 @@
 
 \section{The OU Process}
     \begin{enumerate}
-        \item 
+        \item \textbf{Solving the SDE}
+            We first expand the difference $d(e^{\theta t}X_t)$ using the
+            product rule. This is equivalent to the method of integrating factor
+            for ODEs. 
             \begin{gather*}
                 dX_t = \theta(\mu-X_t)dt + \sigma dW_t, \quad \theta, \sigma > 0
                 \\
@@ -116,7 +119,10 @@
                 \\
                 d(e^{\theta t}X_t) =  e^{\theta t}\left(\theta(\mu-X_t)dt +
                 \sigma dW_t\right) + \theta e^{\theta t}X_t dt
-                \\
+            \end{gather*}
+            We apply It\^{o}'s lemma and integrate the SDE considering that $dW
+            \sim N(0, dt)$. 
+            \begin{gather*}
                 d(e^{\theta t}X_t) = \theta e^{\theta t}\mu dt +
                 \sigma e^{\theta t} dW_t
                 \\
@@ -125,9 +131,11 @@
                 X_t = \mu - (X_0 - \mu)e^{-\theta t} + \sigma \int_0^t e^{-\theta
                 (t - s)}dW_s
             \end{gather*}
-        \item 
-            We begin by investigating the stochastic term in the previous
-            result: 
+            This is the solution to our original SDE. 
+        \item \textbf{Demonstrate $X$ is gaussian}
+            We begin by dividing our solution $X_t$ into deterministic and
+            stochastic components, $\alpha$, and $\beta$ respectively. We find
+            that $\beta$ is a zero-mean gaussian with a computable variance. 
             \begin{gather*}
                 X_t = \alpha + \beta, \quad \alpha = \mu - (X_0 - \mu)e^{-\theta
                 t}, \quad \beta = \sigma \int_0^t e^{-\theta (t - s)}dW_s
@@ -137,6 +145,9 @@
                 \\
                 \sim N\left(0, \frac{\sigma^2}{2\theta}\left[1 -  e^{-2\theta t}\right]\right)
             \end{gather*}
+            Since $X_t$ is composed of a gaussian, we
+            know that $X_t$ is gaussian. We now solve for the mean and
+            variance.
             \begin{gather*}
                 E(X_t) = E\left(\mu - (X_0 - \mu)e^{-\theta t} + \sigma \int_0^t e^{-\theta
                 (t - s)}dW_s\right)
@@ -146,6 +157,8 @@
                 \\
                 = \mu - (X_0 - \mu)e^{-\theta t}
             \end{gather*} 
+            This is exactly equal to the deterministic component, $\alpha$, of
+            our original random variable. Next we look at the variance. 
             \begin{gather*} 
                 \Var(X_t) = E(X_t^2) - E(X_t)^2
                 \\
@@ -155,23 +168,23 @@
                 \\
                 = \frac{\sigma^2}{2\theta}\left[1 -  e^{-2\theta t}\right]
             \end{gather*}
-            This implies that the stationary distribution for $\lim_{t\to\infty}
-            X_t$ is 
+            Using these mean and variance we find that the stationary
+            distribution for $\lim_{t\to\infty} X_t$ is 
             \begin{gather*}
                 \lim_{t\to\infty} X_t \sim N\left(\mu,
                 \frac{\sigma^2}{2\theta}\right)
             \end{gather*}
-        \item \textbf{Half-lfe of a deviation} First we define a deviation as a
+        \item \textbf{Half-life of a deviation} First we define a deviation as a
         perturbation from an initial condition. Since this is a stochastic
         timeseries, we can inject this deviation at any point in the timeseries.
         We define its half-life $\lambda$ as how long it takes for that deviation to
         decrease to half of its original value. 
 
         \begin{gather*}
-            X_t | X_O + d = \mu + (X_0 + d - \mu) e^{\theta t} + \sigma
+            X_t | X_0 + d = \mu + (X_0 + d - \mu) e^{\theta t} + \sigma
             \int_0^{t} e^{-\theta (t - s)}dW_s
             \\
-            X_t | X_O + d = \left(X_t | X_0\right) + d e^{-\theta t}
+            X_t | X_0 + d = \left(X_t | X_0\right) + d e^{-\theta t}
         \end{gather*}
         We find that the deviation follows an expoential decay curve given by
         $e^{-\theta t}$. The half life of this is easy to measure, we have
@@ -211,7 +224,7 @@
         \item Simulating Euler-Maruyama
             \begin{figure}[t]
                 \centering
-                \includegraphics[width=\textwidth]{../python/problem2.png}
+                \includegraphics[width=\textwidth]{../pngs/problem2.png}
                 \caption{Several realizations of $X_t | X_0$ with varying $dt$}
             \end{figure}
 

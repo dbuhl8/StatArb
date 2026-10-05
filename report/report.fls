@@ -1,4 +1,4 @@
-PWD /home/dante/Documents/StatArb/latex
+PWD /home/dante/Documents/StatArb/report
 INPUT /usr/share/texmf-dist/web2c/texmf.cnf
 INPUT /var/lib/texmf/web2c/pdftex/pdflatex.fmt
 INPUT report.tex
@@ -277,11 +277,11 @@ INPUT /usr/share/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT /usr/share/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm
 INPUT /usr/share/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm
 INPUT /var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map
-INPUT ../python/problem2.png
-INPUT ../python/problem2.png
-INPUT ../python/problem2.png
-INPUT ../python/problem2.png
-INPUT ../python/problem2.png
+INPUT ../pngs/problem2.png
+INPUT ../pngs/problem2.png
+INPUT ../pngs/problem2.png
+INPUT ../pngs/problem2.png
+INPUT ../pngs/problem2.png
 INPUT /usr/share/texmf-dist/fonts/tfm/public/cm/cmbx7.tfm
 INPUT /usr/share/texmf-dist/fonts/tfm/public/cm/cmbx5.tfm
 INPUT /usr/share/texmf-dist/fonts/tfm/public/cm/cmmib10.tfm

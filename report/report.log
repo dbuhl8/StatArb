@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.6.2)  4 OCT 2026 12:11
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.6.2)  4 OCT 2026 21:45
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -611,12 +611,12 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
-<../python/problem2.png, id=44, 462.528pt x 346.896pt>
-File: ../python/problem2.png Graphic file (type png)
-<use ../python/problem2.png>
-Package pdftex.def Info: ../python/problem2.png  used on input line 214.
+<../pngs/problem2.png, id=45, 462.528pt x 346.896pt>
+File: ../pngs/problem2.png Graphic file (type png)
+<use ../pngs/problem2.png>
+Package pdftex.def Info: ../pngs/problem2.png  used on input line 227.
 (pdftex.def)             Requested size: 469.75502pt x 352.33655pt.
- [2] [3 <../python/problem2.png>] [4] [5] (./report.aux)
+ [2] [3 <../pngs/problem2.png>] [4] [5] (./report.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
@@ -625,15 +625,15 @@ Package rerunfilecheck Info: File `report.out' has not changed.
 (rerunfilecheck)             Checksum: 7B4396692CDFBA085F33F00C82ABF2FA;819.
  ) 
 Here is how much of TeX's memory you used:
- 23368 strings out of 469515
- 422383 string characters out of 5470808
- 831205 words of memory out of 5000000
- 51632 multiletter control sequences out of 15000+600000
+ 23369 strings out of 469515
+ 422377 string characters out of 5470808
+ 828205 words of memory out of 5000000
+ 51633 multiletter control sequences out of 15000+600000
  637428 words of font info for 77 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  84i,14n,94p,543b,594s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb>
-Output written on report.pdf (5 pages, 544836 bytes).
+Output written on report.pdf (5 pages, 546203 bytes).
 PDF statistics:
  144 PDF objects out of 1000 (max. 8388607)
  105 compressed objects within 2 object streams

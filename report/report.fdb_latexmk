@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1791141066.16105 "report.tex" "report.pdf" "report" 1791141066.89247 0
-  "../python/problem2.png" 1790986059.30846 487277 710e51aa697277bde509ba99c5fd4c3d ""
+["pdflatex"] 1791175556.37289 "report.tex" "report.pdf" "report" 1791175557.11378 0
+  "../pngs/problem2.png" 1790986059.30846 487277 710e51aa697277bde509ba99c5fd4c3d ""
   "/usr/share/texmf-dist/fonts/map/fontname/texfonts.map" 1775415801 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy5.tfm" 1775415801 1120 1e8878807317373affa7f7bba4cf2f6a ""
   "/usr/share/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy7.tfm" 1775415801 1120 7f9f170e8aa57527ad6c49feafd45d54 ""
@@ -172,9 +172,9 @@
   "/usr/share/texmf-dist/web2c/texmf.cnf" 1775415801 43569 fd570f2fa160877d211e859f687312ba ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1780425259 5381098 9f966685d344a3d34adbc94f52661a01 ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1780425247 2328180 79d5ca11ae4145a28de005f5c8948059 ""
-  "report.aux" 1791141066.8553 932 442d8c87553d6a0ea4bcb6a3f8912681 "pdflatex"
-  "report.out" 1791141066.8553 819 7b4396692cdfba085f33f00c82abf2fa "pdflatex"
-  "report.tex" 1791141064.83231 14782 ae5b7e1b9c218c612512b036474669e1 ""
+  "report.aux" 1791175557.07658 932 442d8c87553d6a0ea4bcb6a3f8912681 "pdflatex"
+  "report.out" 1791175557.07658 819 7b4396692cdfba085f33f00c82abf2fa "pdflatex"
+  "report.tex" 1791175556.09959 16412 a199cf95e55a8b5f91de437fdd0654b2 ""
   (generated)
   "report.aux"
   "report.log"
