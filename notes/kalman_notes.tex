@@ -1,0 +1,383 @@
+\documentclass[11pt]{article}
+
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\definecolor{codecomment}{rgb}{0.35,0.45,0.35}
+\definecolor{codekw}{rgb}{0.1,0.2,0.6}
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codecomment}\itshape,
+    keywordstyle=\color{codekw}\bfseries,
+    frame=single,
+    rulecolor=\color{gray!40},
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+}
+
+\newcommand{\Var}{\text{Var}}
+\newcommand{\bs}[1]{\boldsymbol{#1}}
+
+\title{Notes on the Kalman Filter Changes\\
+\large \texttt{buhl.kalman\_spread}: centering, and the choice of $\bs{P}$, $R$, $\bs{Q}$}
+\author{Dante Buhl}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+
+The state-space model is
+\begin{gather*}
+    \ln P^A_t = \alpha_t + \beta_t \ln P^B_t + v_t, \qquad v_t \sim N(0, R),
+    \\
+    \alpha_t = \alpha_{t-1} + w^\alpha_t, \quad
+    \beta_t = \beta_{t-1} + w^\beta_t, \qquad
+    (w^\alpha_t, w^\beta_t) \sim N(0, \bs{Q}).
+\end{gather*}
+The filter is initialized by least squares on the first quarter of the series
+($t < t_f$, \texttt{fnt} in the code) and then run forward over the rest. The
+changes are:
+\begin{enumerate}
+    \item $\ln P^B$ is centered on the mean of the initial window. This is an
+    exact change of variables, so the spread and $\beta_t$ do not change, and
+    $\alpha_t$ and $\bs{P}$ are converted back before returning (Section 1).
+    \item $R$, the residual variance of the initial fit, is unchanged
+    (Section 2).
+    \item $\bs{P}_0$, the covariance matrix of the initial least-squares
+    coefficients, is now built in the centered variables, and an indexing bug is
+    fixed (Section 3).
+    \item $\bs{Q} = \Delta t\,\mathrm{diag}(\sigma_\alpha^2, \sigma_\beta^2)$, a
+    random walk $d\alpha = \sigma_\alpha dW$, $d\beta = \sigma_\beta dW$. The
+    \texttt{np.diag} call is fixed, $\sigma_\alpha$ and $\sigma_\beta$ are now
+    function arguments, and $\sigma_\beta$ defaults to $0.01$ (Section 4).
+    \item Fixes to the recursion: indexing, array shapes, and the spread is now
+    returned (Section 5).
+\end{enumerate}
+All numbers below are for the pair SSD/LIN (basic materials, 2015--2023,
+$\Delta t = 1/252$), which passed the sector sweep.
+
+%-----------------------------------------------------------------------------
+\section{Centering $\ln P^B$}
+
+\paragraph{Change.} Before fitting, subtract the mean of $\ln P^B$ over the
+initial window, $\bar{x} = \frac{1}{t_f}\sum_{t<t_f} \ln P^B_t$, and run the
+filter in the variable $x_t = \ln P^B_t - \bar{x}$.
+
+\paragraph{Why it does not change the data.} For any $(\alpha, \beta)$,
+\begin{gather*}
+    \alpha + \beta \ln P^B_t = (\alpha + \beta\bar{x}) + \beta(\ln P^B_t - \bar{x})
+    = \tilde{\alpha} + \beta x_t,
+    \qquad \tilde{\alpha} = \alpha + \beta\bar{x}.
+\end{gather*}
+The model is identical with the intercept relabeled. The hedge ratio $\beta$ and
+the spread $S_t = \ln P^A_t - \alpha - \beta\ln P^B_t$ are unchanged. In matrix
+form the change of variables is
+\begin{gather*}
+    \begin{bmatrix}\alpha\\ \beta\end{bmatrix} = \bs{T}
+    \begin{bmatrix}\tilde{\alpha}\\ \beta\end{bmatrix},
+    \qquad
+    \bs{T} = \begin{bmatrix} 1 & -\bar{x} \\ 0 & 1 \end{bmatrix},
+\end{gather*}
+so a covariance matrix of $(\tilde\alpha, \beta)$ maps back as
+$\bs{P} = \bs{T}\tilde{\bs{P}}\bs{T}^T$. Both conversions are applied before
+returning, so the outputs satisfy the same identity as \texttt{fit\_spread}:
+$\ln P^A = \alpha + \beta \ln P^B + S$.
+
+\paragraph{Why it helps.} With $\ln P^B \approx 5.15$ and little variation,
+$\alpha$ is the intercept at $\ln P^B = 0$, far from the data. Raising $\beta$
+and lowering $\alpha$ fits almost equally well, so the two estimates are almost
+perfectly negatively correlated. After centering, $\tilde\alpha$ is the fitted
+level of $\ln P^A$ at the typical value of $\ln P^B$, and it is uncorrelated
+with $\beta$:
+
+\begin{center}
+\begin{tabular}{lcc}
+    \toprule
+    Initial covariance $\bs{P}_0$ & raw $\ln P^B$ & centered \\
+    \midrule
+    corr$(\alpha, \beta)$ & $-0.99990$ & $0.00000$ \\
+    condition number & $1.2\times 10^5$ & $2.4\times 10^2$ \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}
+# center lPb on the initial window, this is only a change of variables:
+# alpha + beta*lPb = (alpha + beta*lPb_mean) + beta*(lPb - lPb_mean)
+lPb_mean = np.mean(lPb[:fnt])
+x = lPb - lPb_mean
+
+# initial fit on reduced timeseries
+S, hedge_ratio, other_stuff, result = fit_spread(lPa[:fnt], x[:fnt])
+...
+# undo the centering, alpha -> alpha - beta*lPb_mean and P -> T P T^T
+alpha = alpha - hedge_ratio*lPb_mean
+T = np.array([[1., -lPb_mean], [0., 1.]])
+P = T@P@T.T
+\end{lstlisting}
+
+\paragraph{Numerical check.} \texttt{fit\_spread} on the initial window with
+raw and centered $\ln P^B$ gives spreads that agree to $1.8\times10^{-14}$, the
+same $\beta$, SSR and ADF $p$-value, and
+$\tilde\alpha - \beta\bar{x} = \alpha_{\text{raw}} = -1.087732$. I also wrote
+a separate filter entirely in the raw variables, with the equivalent
+$\bs{Q}_{\text{raw}} = \bs{T}\bs{Q}\bs{T}^T$, and compared it with the new
+\texttt{kalman\_spread}:
+
+\begin{center}
+\begin{tabular}{ccccc}
+    \toprule
+    $(\sigma_\alpha, \sigma_\beta)$ & max $|\Delta\alpha_t|$ &
+    max $|\Delta\beta_t|$ & max $|\Delta S_t|$ & max $|\Delta \bs{P}|$ \\
+    \midrule
+    $(0, 0)$      & $2.2\times10^{-12}$ & $4.7\times10^{-13}$ & $1.1\times10^{-13}$ & $5.0\times10^{-16}$ \\
+    $(0.03, 0.01)$ & $1.7\times10^{-12}$ & $3.6\times10^{-13}$ & $5.1\times10^{-14}$ & $3.7\times10^{-14}$ \\
+    $(0.1, 0.1)$   & $8.3\times10^{-13}$ & $1.6\times10^{-13}$ & $4.5\times10^{-14}$ & $6.7\times10^{-14}$ \\
+    \bottomrule
+\end{tabular}
+\end{center}
+The two agree to rounding error. Centering changes the numerics, not the
+results.
+
+\paragraph{One caveat.} Centering does not change the data, but it does change
+what a \emph{diagonal} $\bs{Q}$ means. A diagonal $\bs{Q}$ in the centered
+variables equals $\bs{Q}_{\text{raw}} = \bs{T}\bs{Q}\bs{T}^T$ in the raw
+variables, which is not diagonal. Putting the same $\sigma$'s on the diagonal
+in the raw variables is a different model:
+
+\begin{center}
+\begin{tabular}{lccc}
+    \toprule
+    $(\sigma_\alpha, \sigma_\beta) = (0.03, 0.01)$ & half-life (days) & std$(S_t)$ & range of $\beta_t$ \\
+    \midrule
+    diagonal $\bs{Q}$, centered (new) & 18.8 & 0.0726 & 0.933 -- 1.091 \\
+    diagonal $\bs{Q}$, raw (old)      & 12.2 & 0.0593 & 0.906 -- 1.049 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+The centered version is the meaningful one. There $\sigma_\alpha$ is the drift
+of the spread's level, which is not tied to the arbitrary point
+$\ln P^B = 0$.
+
+%-----------------------------------------------------------------------------
+\section{Observation noise $R$}
+
+\paragraph{Change.} None to the formula. It was already in place before this
+change (replacing the original placeholder $R = 0$): $R$ is the residual
+variance of the initial least-squares fit,
+\begin{gather*}
+    R = \frac{\text{SSR}}{t_f - 2},
+\end{gather*}
+dividing by $t_f - 2$ because two coefficients are estimated.
+
+\paragraph{Why.} In the observation equation the noise $v_t$ is the spread
+itself, i.e.\ the part of $\ln P^A$ not explained by $\alpha_t + \beta_t\ln
+P^B_t$. Its variance is the stationary variance of the spread over the initial
+window. For SSD/LIN, $\sqrt{R} \approx 0.10$, which matches the static spread's
+standard deviation. With $R = 0$ the filter treats every observation as exact
+and puts the entire error into $(\alpha, \beta)$.
+
+\begin{lstlisting}
+# R: variance of the observation noise, residual variance of initial fit
+R = res/(fnt-2)
+\end{lstlisting}
+\texttt{res} is the sum of squared residuals returned by \texttt{fit\_spread}
+(now \texttt{resid[0]}, a scalar). Centering does not change it.
+
+%-----------------------------------------------------------------------------
+\section{Initial state covariance $\bs{P}_0$}
+
+\paragraph{Change.} The formula, the covariance matrix of the least-squares
+coefficients from the initial fit, was already in place. It is now built from
+the centered $x_t$, which makes it diagonal, and the slicing bug is fixed.
+
+\paragraph{Why.} $\bs{P}$ is the filter's uncertainty in $(\alpha, \beta)$. At
+initialization we have exactly that from regression: with design matrix
+$\bs{A}$ (rows $[1, x_t]$, $t < t_f$) and residual variance $R$,
+\begin{gather*}
+    \Var\begin{bmatrix}\hat\alpha\\ \hat\beta\end{bmatrix}
+    = R\,(\bs{A}^T\bs{A})^{-1}.
+\end{gather*}
+The diagonal holds $\Var(\hat\alpha)$ and $\Var(\hat\beta)$, which is the
+``diagonal with the error of the initial fit'' idea made exact. The
+off-diagonal term is kept. In the centered variables it is zero anyway (see
+Section 1), so $\bs{P}_0$ is diagonal there. For SSD/LIN,
+$\text{sd}(\hat\beta) \approx 0.066$ at initialization.
+
+\begin{lstlisting}
+# P: covariance of (alpha, beta) from the initial least-squares fit
+A = np.stack((np.ones(fnt), x[:fnt]), axis=1)
+P = R*np.linalg.inv(A.T@A)
+del A
+\end{lstlisting}
+This also fixes \texttt{lPb[:,fnt]}, which indexed a column of a 1-D array.
+It should be the slice \texttt{lPb[:fnt]}, now the centered \texttt{x[:fnt]}.
+
+%-----------------------------------------------------------------------------
+\section{State noise $\bs{Q}$}
+
+\paragraph{Change.} $\bs{Q}$ was originally $\bs{I}\,\Delta t$. It is now
+\begin{gather*}
+    \bs{Q} = \Delta t
+    \begin{bmatrix} \sigma_\alpha^2 & 0 \\ 0 & \sigma_\beta^2 \end{bmatrix},
+\end{gather*}
+with $\sigma_\alpha$ and $\sigma_\beta$ passed as arguments (defaults $0.03$ and
+$0.01$ per $\sqrt{\text{year}}$).
+
+\paragraph{Why.} $\bs{Q}$ is the noise in the evolution of $(\alpha, \beta)$.
+Modeling them as Brownian motion is right, but the general form is
+$d\beta_t = \sigma_\beta\,dW_t$, whose per-step variance is
+$\sigma_\beta^2\Delta t$. $\bs{Q} = \bs{I}\,\Delta t$ is the special case
+$\sigma_\alpha = \sigma_\beta = 1$, i.e.\ \emph{standard} Brownian motion. With
+$\Delta t = 1/252$ that means $\beta$ wanders about $\pm 1$ per year and
+$\pm 0.06$ per day. For a hedge ratio near 1, that would make the hedge
+meaningless. The filter then attributes almost every price move to a change in
+$\beta$, and the spread's half-life collapses to about $0.2$ days.
+
+A smaller $\sigma$ is still a random walk, just with a smaller diffusion
+coefficient. $\sigma = 0$ recovers the static hedge ratio, so the $\sigma$'s
+interpolate between the static model of Problem 3 and a hedge that adapts
+every day:
+
+\begin{center}
+\begin{tabular}{ccc}
+    \toprule
+    $\sigma_\beta$ (per $\sqrt{\text{yr}}$) & $q = \sigma_\beta^2\Delta t$ & typical drift of $\beta$ in 1 year \\
+    \midrule
+    $1$ (old)  & $4\times10^{-3}$ & $\pm 1$ \\
+    $0.05$     & $1\times10^{-5}$ & $\pm 0.05$ \\
+    $0.01$     & $4\times10^{-7}$ & $\pm 0.01$ \\
+    $0$        & $0$              & none (static) \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Choosing $\sigma_\alpha$.} After centering, $\tilde\alpha$ is the
+spread's level, so its drift competes directly with the mean reversion we want
+to trade. Over one half-life $\tau$ the level wanders by about
+$\sigma_\alpha\sqrt{\tau}$. That should be small compared with the spread's
+stationary standard deviation. For SSD/LIN ($\text{std} \approx 0.10$,
+$\tau \approx 0.17$ yr), $\sigma_\alpha = 0.03$ gives a wander of $\approx
+0.012$, which is small. $\sigma_\alpha = 0.1$ gives $\approx 0.04$, which
+absorbs a large part of the spread.
+
+\paragraph{Grid on SSD/LIN} (centered; entries are innovation log-likelihood /
+half-life in days / std of spread):
+\begin{center}
+\small
+\begin{tabular}{ccccc}
+    \toprule
+    $\sigma_\alpha \backslash \sigma_\beta$ & $0$ & $0.01$ & $0.03$ & $0.1$ \\
+    \midrule
+    $0$    & 2796 / 43.5 / 0.109 & 3098 / 33.4 / 0.097 & 3366 / 20.6 / 0.079 & 3585 / 10.3 / 0.058 \\
+    $0.01$ & 3131 / 33.1 / 0.095 & 3215 / 28.8 / 0.090 & 3398 / 19.8 / 0.077 & 3589 / 10.2 / 0.058 \\
+    $0.03$ & 3436 / 19.4 / 0.074 & 3448 / 18.8 / 0.073 & 3502 / 16.0 / 0.068 & 3611 / 9.8 / 0.055 \\
+    $0.1$  & 3644 / 8.7 / 0.051  & 3644 / 8.7 / 0.051  & 3647 / 8.5 / 0.050  & 3665 / 7.1 / 0.046 \\
+    $0.3$  & 3662 / 3.4 / 0.034  & 3662 / 3.4 / 0.034  & 3662 / 3.4 / 0.033  & 3659 / 3.3 / 0.033 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+The likelihood keeps rising toward large $\sigma$'s, but there the half-life
+falls to a few days: the filter is fitting the noise. The likelihood favors
+large $\sigma$ because the model assumes $v_t$ is white when it is actually an
+OU process. The defaults $(0.03, 0.01)$ keep a tradeable half-life
+($\approx 19$ days) while letting the hedge adapt. This trade-off is the
+answer to Problem 4(b)'s question ``closer to stationary, or just fitting
+noise?''. The final values should be chosen on the formation period and
+checked out of sample in Problem 5.
+
+\begin{lstlisting}
+def kalman_spread(lPa, lPb, dt, sigma_alpha=0.03, sigma_beta=0.01):
+    ...
+    # Q: covariance of the random walk increments of (alpha, beta) per step
+    Q = np.diag([sigma_alpha**2, sigma_beta**2])*dt
+\end{lstlisting}
+This also fixes \texttt{np.diag(sigma\_alpha**2, sigma\_beta**2)}.
+\texttt{np.diag} takes one array, and its second argument is the diagonal
+offset, so passing a scalar raised
+\texttt{ValueError: Input must be 1- or 2-d}. The previous default $\sigma_\beta = 0.05$ is
+lowered to $0.01$ based on the grid above.
+
+%-----------------------------------------------------------------------------
+\section{Fixes to the recursion}
+
+\begin{lstlisting}
+for i in range(fnt,nt):
+    H = np.array([1., x[i]])
+    # propagate the uncertainty forward
+    P = P + Q
+    # compute the error in the prediction, this is the spread at time i
+    # using only alpha, beta known at time i-1
+    err = lPa[i] - alpha[i-1] - hedge_ratio[i-1]*x[i]
+    # compute uncertainty of observations
+    OE = H@P@H + R
+    # Kalman Gain
+    K = P@H/OE
+    # Update alpha, hedge_ratio, uncertainty
+    alpha[i] = alpha[i-1] + K[0]*err
+    hedge_ratio[i] = hedge_ratio[i-1] + K[1]*err
+    P = (np.eye(2) - np.outer(K,H))@P
+    spread[i] = err
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Indexing.} The loop used \texttt{i+1} up to \texttt{nt-1},
+    so the last step raised an \texttt{IndexError}. It now updates step
+    \texttt{i} from step \texttt{i-1}. The first step uses the initial fit
+    stored at \texttt{fnt-1}.
+    \item \textbf{Shapes.} \texttt{H} is a 1-D array, so \texttt{H@P@H} is a
+    scalar and \texttt{K} is a length-2 vector. There are no $1\times1$ arrays
+    or nested lists.
+    \item \textbf{Spread returned.} The spread is the one-step prediction
+    error $e_t = \ln P^A_t - \alpha_{t-1} - \beta_{t-1}\ln P^B_t$. It uses
+    only information available at time $t$, so it can be traded in Problem 5
+    without lookahead. For $t < t_f$ it is the in-sample spread of the initial
+    fit. The \emph{updated} residual $\ln P^A_t - \alpha_t - \beta_t\ln P^B_t$
+    is not used, because it is close to zero almost by construction.
+    \item \textbf{Return value} is now
+    \texttt{[alpha, hedge\_ratio, spread, P]} in the original variables. Before,
+    it returned only the final \texttt{P} and no spread.
+\end{itemize}
+
+%-----------------------------------------------------------------------------
+\section{Verification}
+
+\paragraph{Synthetic data.} With $\ln P^B$ a random walk and
+$\ln P^A = -0.5 + 1.3\ln P^B + \text{noise}$ (constant coefficients, 2000
+steps), the filter with $\sigma_\alpha = \sigma_\beta = 0$ ends at
+$\alpha = -0.508$, $\beta = 1.302$ ($\text{sd}(\beta) = 0.0024$). With the
+defaults it ends at $\alpha = -0.494$, $\beta = 1.298$.
+
+\paragraph{SSD/LIN, static vs.\ Kalman} (filtered part of the formation period):
+\begin{center}
+\begin{tabular}{lccc}
+    \toprule
+    & $\beta$ & half-life (days) & std of spread \\
+    \midrule
+    static OLS (full period) & 1.019 & 51.4 & 0.111 \\
+    Kalman $(0.03, 0.01)$ & 0.933 -- 1.091 & 18.8 & 0.073 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+The check script is \texttt{check\_kalman.py}. It compares the centered filter
+with a raw-variable reference, the old diagonal $\bs{Q}$, and the synthetic
+case.
+
+\end{document}

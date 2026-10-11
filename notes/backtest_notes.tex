@@ -1,0 +1,310 @@
+\documentclass[11pt]{article}
+
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\definecolor{codebg}{rgb}{0.96,0.96,0.96}
+\definecolor{codecomment}{rgb}{0.35,0.45,0.35}
+\definecolor{codekw}{rgb}{0.1,0.2,0.6}
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    commentstyle=\color{codecomment}\itshape,
+    keywordstyle=\color{codekw}\bfseries,
+    frame=single,
+    rulecolor=\color{gray!40},
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+}
+
+\title{Notes on the Problem 5 Backtest\\
+\large \texttt{buhl.pairs\_backtest}, \texttt{prob5\_driver.py}, and how trades are tracked}
+\author{Dante Buhl}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+
+\begin{itemize}
+    \item \textbf{New function} \texttt{buhl.pairs\_backtest}: trades one pair's
+    standardized spread $z_t$ under the rule in 5(a). Your lag-day trend
+    check is an optional entry filter.
+    \item \textbf{\texttt{prob5\_driver.py}, lines 1--106, rewritten}:
+    \begin{itemize}
+        \item reads the formation-period results (\texttt{sector\_pairs.dat},
+        \texttt{kalman\_data.dat});
+        \item downloads the test period once (2024-01-01 to 2026-10-01);
+        \item builds the static and Kalman $z$-scores without lookahead;
+        \item runs four variants per pair: static/Kalman spread, each with
+        the trend filter off and on;
+        \item records every trade in an inventory and a ledger.
+    \end{itemize}
+    \item \textbf{Trade tracking}: an \emph{inventory} (shares held at every
+    close) and a \emph{ledger} of every purchase and sale. Sharpe ratio,
+    drawdown, turnover, trade counts and transaction costs can all be computed
+    from these two afterwards without rerunning the backtest (Section 3).
+\end{itemize}
+
+%-----------------------------------------------------------------------------
+\section{Changes to \texttt{prob5\_driver.py}}
+
+\paragraph{Problems in the original shell.}
+\begin{center}
+\small
+\begin{tabular}{p{0.42\textwidth}p{0.48\textwidth}}
+    \toprule
+    Problem & Fix \\
+    \midrule
+    \texttt{pairs\_filename}, \texttt{sector\_tickers}, \texttt{inv} undefined
+        & one \texttt{data\_dir}; tickers from the pairs file; inventory arrays (Section 3) \\
+    \texttt{set(ticker\_a+ticker\_b)} joins strings element by element
+        & \texttt{sorted(set(ticker\_a) | set(ticker\_b))} \\
+    prices logged twice (\texttt{np.log} of log prices)
+        & separate \texttt{prices} and \texttt{log\_prices} dictionaries of arrays \\
+    \texttt{fit\_SDE} and \texttt{kalman\_spread} refit on the test data (lookahead)
+        & all parameters come from the formation-period files \\
+    \texttt{mu, theta, sigma} unpacked in the wrong order
+        & no refit is needed, so the call is gone \\
+    entry threshold used the OU $\sigma$
+        & uses the stationary std of the spread, \texttt{stat\_std\_dev} \\
+    $\alpha$ missing from the static spread
+        & $S_t = \ln P^A_t - \alpha - \beta\ln P^B_t$ \\
+    \texttt{db.BFD(y, j+1, dt)}: shape mismatch for $j \ge$ \texttt{lag}
+        & \texttt{BFD(lP[t-lag:t+1], lag+1, dt)}, i.e.\ $n = $ \texttt{len(y)} \\
+    \texttt{else if}, \texttt{inv \& ...}
+        & valid Python \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Data in.} The two formation-period files have one row per pair in
+the same order. The driver checks this and stops with an error if the tickers
+don't match (rerun \texttt{prob4\_driver.py} after any new sweep). The test
+prices are downloaded in one call and stored as dictionaries of numpy arrays
+on a shared date grid, the same pattern as Problem 4:
+\begin{lstlisting}
+tickers = sorted(set(ticker_a) | set(ticker_b))
+ticker_prices = yf.download(tickers, start=start, end=end, auto_adjust=True,
+                            progress=False)["Close"]
+dates = ticker_prices.index
+prices = {ticker: np.array(ticker_prices[ticker]) for ticker in tickers}
+log_prices = {ticker: np.log(prices[ticker]) for ticker in tickers}
+\end{lstlisting}
+
+\paragraph{Spreads without lookahead.} For each pair, keep only the days
+where both prices exist (\texttt{mask}). Then build:
+\begin{gather*}
+    z^{\text{static}}_t = \frac{\ln P^A_t - \alpha - \beta \ln P^B_t - \mu}{\sigma_{\text{stat}}},
+    \qquad
+    z^{\text{kalman}}_t = \frac{e_t - \mu_k}{\sigma_{\text{stat},k}},
+\end{gather*}
+where all of $(\alpha, \beta, \mu, \sigma_{\text{stat}})$ come from
+\texttt{sector\_pairs.dat}. The Kalman spread $e_t$ continues the filter from
+its state on the last formation day, with $(\mu_k, \sigma_{\text{stat},k})$
+from \texttt{kalman\_data.dat}. $e_t$ is the one-step prediction error, so it
+uses only $(\alpha_{t-1}, \beta_{t-1})$ and the prices at $t$.
+\begin{lstlisting}
+alpha_k, hr_k, spread_k, P_k, R_k, lPb_mean_k = db.kalman_spread(lPa, lPb,
+    dt, kalman["sigma_alpha"][i], kalman["sigma_beta"][i],
+    alpha0=kalman["alpha"][i], beta0=kalman["hedge_ratio"][i], P0=P0,
+    R=kalman["R"][i], lPb_mean=kalman["lPb_mean"][i])
+z_kalman = (spread_k - kalman["mu"][i])/kalman["stat_std_dev"][i]
+\end{lstlisting}
+
+%-----------------------------------------------------------------------------
+\section{The trading rule: \texttt{buhl.pairs\_backtest}}
+
+\begin{lstlisting}
+def pairs_backtest(Pa, Pb, lPa, lPb, z, hedge_ratio, z_in=2., z_out=1.,
+                   lag=10, dt=1./252, trend_filter=False):
+\end{lstlisting}
+
+The position state is $s \in \{-1, 0, +1\}$ (short spread, flat, long spread).
+The decision on day $t$ uses $z_t$:
+\begin{center}
+\begin{tabular}{lll}
+    \toprule
+    State & Condition at close $t$ & Action at close $t+1$ \\
+    \midrule
+    flat & $z_t > z_{\text{in}}$ & $s=-1$: sell \$1 of A, buy \$$\beta_t$ of B \\
+    flat & $z_t < -z_{\text{in}}$ & $s=+1$: buy \$1 of A, sell \$$\beta_t$ of B \\
+    in a trade & $|z_t| < z_{\text{out}}$ & sell back the shares held, $s = 0$ \\
+    in a trade & last valid day & forced close \\
+    \bottomrule
+\end{tabular}
+\end{center}
+The defaults are $z_{\text{in}} = 2$ and $z_{\text{out}} = 1$, from your
+comments.
+
+\paragraph{Why these positions.} A long spread position pays
+$\Delta\ln P^A - \beta\Delta\ln P^B = \Delta S$. When $z$ is very negative,
+the spread is expected to rise back toward $\mu$, so we go long, and the
+reverse when $z$ is very positive. \$1 of A against \$$\beta$ of B is the
+dollar hedge that matches the hedge ratio, since $\beta$ is defined in log
+prices.
+
+\paragraph{No lookahead.} The signal is computed from the close on day $t$,
+and the trade fills at the close on day $t+1$. No entry is allowed whose fill
+would land on the last day. The first \texttt{lag} days are skipped so the
+trend filter always has a full window.
+
+\paragraph{Sizing.} The share counts are set at entry and held until exit:
+\begin{gather*}
+    n_A = \frac{s}{P^A_{t+1}}, \qquad n_B = -\frac{s\,\beta_t}{P^B_{t+1}}.
+\end{gather*}
+There is no daily re-hedging. For the Kalman variants, $\beta_t$ moves every
+day, but it only enters through the $z$-score and the hedge at entry. That
+keeps turnover (and costs) down. Daily re-hedging would be a different
+strategy.
+
+\paragraph{Trend filter.} With \texttt{trend\_filter=True}, an entry is only
+taken if the leg being bought has fallen over the last \texttt{lag} days, using
+your backward difference:
+\begin{lstlisting}
+lP_buy = lPa if (s == 1) else lPb
+trend = np.sum(BFD(lP_buy[t-lag:t+1], lag+1, dt))
+if (trend >= 0):
+    s = 0
+\end{lstlisting}
+The sum of the backward differences telescopes to
+$(\ln P_t - \ln P_{t-\text{lag}})/\Delta t$, the log return over the window.
+Exits are never filtered, so a position is never kept open because of the
+trend.
+
+%-----------------------------------------------------------------------------
+\section{How trades are tracked}
+
+Two records are kept, following your inventory plus purchases/sales idea.
+
+\paragraph{1. Inventory (the \texttt{inv}).} For each variant \texttt{v},
+\texttt{shares\_a[v]} and \texttt{shares\_b[v]} are arrays of shape
+(number of pairs $\times$ test days). Entry $[i, t]$ is the number of shares of
+that leg held by pair $i$ at the close of day $t$. Positive is long and
+negative is short.
+\begin{lstlisting}
+variants = [('static', False), ('static', True), ('kalman', False),
+            ('kalman', True)]
+shares_a = {v: np.zeros((num_pairs, nt_all)) for v in variants}
+shares_b = {v: np.zeros((num_pairs, nt_all)) for v in variants}
+\end{lstlisting}
+Because holdings are stored for every day, the daily P\&L is a single product:
+\begin{gather*}
+    \text{PnL}_t = \sum_i n^A_{i,t-1}\,(P^A_{i,t} - P^A_{i,t-1})
+                 + n^B_{i,t-1}\,(P^B_{i,t} - P^B_{i,t-1}).
+\end{gather*}
+\textbf{Missing days.} The backtest runs only on a pair's valid days, so
+results are mapped back to the full date grid. A missing price in the middle
+of the window must not close the position, so each missing day takes the
+holdings of the last valid day:
+\begin{lstlisting}
+full_range = np.arange(days[0], days[-1]+1)
+last_valid = np.searchsorted(days, full_range, side='right') - 1
+shares_a[v][i, full_range] = sa[last_valid]
+\end{lstlisting}
+When computing P\&L, also forward-fill prices over missing days. This fixed a
+real mismatch: LBRDA has a gap partway through the test period.
+
+\paragraph{2. Ledger (purchases and sales).} Every transaction leg is one row
+of a numpy structured array:
+\begin{center}
+\small
+\begin{tabular}{ll}
+    \toprule
+    field & meaning \\
+    \midrule
+    \texttt{pair} & row index into the pairs files \\
+    \texttt{day} & index into \texttt{dates} (the fill day) \\
+    \texttt{leg}, \texttt{ticker} & \texttt{'A'} or \texttt{'B'} and its ticker \\
+    \texttt{shares} & signed: $> 0$ purchase, $< 0$ sale \\
+    \texttt{price} & fill price \\
+    \texttt{branch}, \texttt{trend\_filter} & which variant made the trade \\
+    \bottomrule
+\end{tabular}
+\end{center}
+\begin{lstlisting}
+purchases = ledger[ledger['shares'] > 0]
+sales = ledger[ledger['shares'] < 0]
+\end{lstlisting}
+A round trip is four rows: the entry and the exit of both legs.
+
+\paragraph{What each metric needs.}
+\begin{center}
+\small
+\begin{tabular}{lp{0.62\textwidth}}
+    \toprule
+    Quantity & From \\
+    \midrule
+    daily P\&L, Sharpe, drawdown & inventory and forward-filled prices (formula above) \\
+    number of trades & ledger rows / 4, per variant \\
+    turnover & $\sum |\texttt{shares}\cdot\texttt{price}|$ over the ledger \\
+    transaction costs & $c\,|\texttt{shares}\cdot\texttt{price}|$ subtracted on each row's \texttt{day} \\
+    cost sweep (5b) & repeat the line above for several $c$; no new backtest \\
+    \bottomrule
+\end{tabular}
+\end{center}
+For example, net daily P\&L at cost rate $c$ for variant \texttt{v}:
+\begin{lstlisting}
+in_v = (ledger['branch'] == v[0]) & (ledger['trend_filter'] == v[1])
+cost = np.zeros(nt_all)
+np.add.at(cost, ledger['day'][in_v],
+          c*np.abs(ledger['shares'][in_v]*ledger['price'][in_v]))
+pnl_net = pnl_gross - cost
+\end{lstlisting}
+
+%-----------------------------------------------------------------------------
+\section{Verification}
+
+\paragraph{Synthetic path} (40 days, $\beta = 1.3$):
+\begin{itemize}
+    \item a $z = 2.5$ signal on day 12 fills on day 13: short 0.0099 shares of
+    A at \$101 (\$1) and long 0.0265 shares of B at \$49 (\$1.30). The exit
+    signal on day 18 fills on day 19;
+    \item a long entry that never meets the exit condition is closed on the
+    last day;
+    \item the trend filter blocks a long-spread entry while A is rising, and
+    allows a short-spread entry while B is falling;
+    \item a signal on the second-to-last day doesn't open a trade;
+    \item each leg's shares sum to zero.
+\end{itemize}
+
+\paragraph{Full run} (931 pairs, 689 test days):
+\begin{itemize}
+    \item every (pair, leg, variant) nets to zero shares, and nothing is held
+    on the last day;
+    \item the total Kalman P\&L summed from the inventory equals the ledger's
+    cash flows $-\sum \texttt{shares}\cdot\texttt{price}$ exactly
+    ($-145.263883$ both ways, before costs, at \$1 notional per trade).
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{lcc}
+    \toprule
+    Variant & trades & ledger rows \\
+    \midrule
+    static & 1966 & 7864 \\
+    static + trend filter & 1880 & 7520 \\
+    Kalman & 4345 & 17380 \\
+    Kalman + trend filter & 3909 & 15636 \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Still to do} (after line 106): Sharpe ratio, maximum drawdown,
+turnover and trade counts before and after costs; the cost sweep; and the
+broken-pair diagnostic for 5(c).
+
+\end{document}
